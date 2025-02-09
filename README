@@ -1,0 +1,118 @@
+# Airflow avec Spark et PostgreSQL
+
+Ce projet configure un environnement de développement Airflow avec Spark et PostgreSQL pour l'ETL de données.
+
+## Structure du projet
+```
+airflow-spark-dev/
+├── dags/
+│   ├── pokemon_spark_dag.py
+│   └── pokemon_spark_etl.py
+├── logs/
+├── docker-compose.yml
+├── Dockerfile
+└── entrypoint.sh
+```
+
+## Démarrage rapide
+
+### 1. Démarrer l'environnement
+```bash
+# Démarrer tous les services
+docker compose up -d --build
+
+# Vérifier que tous les services sont up
+docker compose ps
+```
+
+### 2. Arrêter l'environnement
+```bash
+# Arrêter tous les services
+docker compose down
+
+# Pour supprimer aussi les volumes (données PostgreSQL)
+docker compose down -v
+```
+
+### 3. Voir les logs
+```bash
+# Tous les services
+docker compose logs -f
+
+# Service spécifique
+docker compose logs -f webserver
+docker compose logs -f scheduler
+docker compose logs -f postgres
+```
+
+## Utilisation d'Airflow
+
+### 1. Accéder à l'interface web
+- Ouvrir http://localhost:8080
+- Identifiants par défaut:
+  - Username: admin
+  - Password: admin
+
+### 2. Activer et exécuter le DAG
+1. Dans l'interface Airflow, trouvez le DAG "pokemon_spark_etl"
+2. Activez le DAG en cliquant sur le switch à gauche
+3. Pour une exécution manuelle:
+   - Cliquez sur le bouton "Play" ▶️
+   - Sélectionnez "Trigger DAG"
+
+### 3. Vérifier l'exécution
+1. Cliquez sur le nom du DAG
+2. Allez dans "Graph View" pour voir le statut de chaque tâche
+3. Cliquez sur une tâche puis "View Log" pour voir les logs détaillés
+
+## Vérifier les données PostgreSQL
+
+### 1. Se connecter à PostgreSQL
+```bash
+# Afficher une portion de données sans se connecter
+docker compose exec postgres psql -U airflow -d airflow -c "SELECT * FROM pokemon_data LIMIT 5;"
+
+# Connexion au conteneur PostgreSQL
+docker compose exec postgres psql -U airflow -d airflow
+```
+
+### 2. Requêtes utiles
+```sql
+-- Voir toutes les tables
+\dt
+
+-- Voir les données Pokemon
+SELECT * FROM pokemon_data LIMIT 5;
+
+-- Compter le nombre de Pokemons
+SELECT COUNT(*) FROM pokemon_data;
+
+-- Voir les différents types de Pokemon
+SELECT DISTINCT type_1 FROM pokemon_data;
+```
+
+### 3. Export des données (optionnel)
+```bash
+# Exporter les résultats en CSV
+docker compose exec postgres psql -U airflow -d airflow -c "\COPY (SELECT * FROM pokemon_data) TO '/tmp/pokemon_export.csv' WITH CSV HEADER;"
+```
+
+## Dépannage
+
+### 1. Si le scheduler ne démarre pas
+```bash
+docker compose restart scheduler
+```
+
+### 2. Vérifier les logs spécifiques
+```bash
+# Logs du DAG
+docker compose exec webserver airflow task log pokemon_spark_etl spark_pokemon_etl latest
+```
+
+### 3. Réinitialiser la base de données
+```bash
+# Supprimer et recréer l'environnement
+docker compose down -v
+docker compose up -d --build
+```
